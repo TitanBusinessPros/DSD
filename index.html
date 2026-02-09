@@ -331,14 +331,14 @@
     <div id="gameContainer">
         <div id="startScreen">
             <h1 id="title">Don't Shock Mason</h1>
-            <img id="startImage" src="https://github.com/TitanBusinessPros/DSD/raw/main/Game-Start-Image.png" alt="Game Start">
+            <img id="startImage" src="https://github.com/TitanBusinessPros/DSD/raw/main/Game%20Start.png" alt="Game Start">
             <div id="rules">
                 <h2>Game Rules:</h2>
                 <ul>
                     <li>Defend the fuse box from electrical monsters for 5 stages</li>
                     <li>Stand on the fuse box for 20 seconds after killing all monsters to win each stage</li>
                     <li>Each stage has a 3-minute time limit</li>
-                    <li>Monsters appear gradually over the first minute</li>
+                    <li>Stage 1: 10 enemies | Stage 2: 20 | Stage 3: 30 | Stage 4: 40 | Stage 5: 50</li>
                     <li>You take 20% more damage when standing in water</li>
                     <li>Use arrow keys or touch controls to move</li>
                     <li>Press Space or touch the shoot button to fire lightning bolts</li>
@@ -433,25 +433,27 @@
         let maxStages = 5;
         let score = 0;
         let kills = 0;
-        let gameTime = 180; // 3 minutes in seconds
+        let stageKills = 0; // Track kills for current stage
+        let totalEnemiesThisStage = 0; // Total enemies for current stage
+        let gameTime = 180;
         let fuseBoxTime = 0;
         let isInWater = false;
         let audioEnabled = true;
         let lastTime = 0;
         let spawnStartTime = 0;
         
-        // Player stats - SPEED REDUCED BY 50% (from 5 to 2.5)
+        // Player stats
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
             width: 40,
             height: 60,
-            speed: 2.5, // REDUCED BY 50%
+            speed: 2.5,
             maxHealth: 100,
             health: 100,
             attackDamage: 20,
             attackCooldown: 0,
-            attackSpeed: 300, // ms between attacks
+            attackSpeed: 300,
             lastAttack: 0,
             direction: { x: 0, y: 0 }
         };
@@ -464,7 +466,7 @@
             height: 100
         };
         
-        // Water areas (simplified as circles for collision)
+        // Water areas
         const waterAreas = [
             { x: canvas.width / 2 - 150, y: canvas.height / 2 + 50, radius: 80 },
             { x: canvas.width / 2 + 150, y: canvas.height / 2 - 50, radius: 60 },
@@ -477,57 +479,57 @@
         let playerProjectiles = [];
         let monsterProjectiles = [];
         
-        // Monster types with their properties - SPEED REDUCED BY 100% (set to 0 for all)
+        // Monster types
         const monsterTypes = [
-            { // Type 0 - Monster 1 (shoots electric bolts every 5 seconds)
+            {
                 name: "Sparky",
                 color: "#FF5555",
                 health: 50,
-                speed: 0, // REDUCED BY 100% (from 2 to 0)
+                speed: 0,
                 attackDamage: 10,
-                attackCooldown: 5000, // 5 seconds
+                attackCooldown: 5000,
                 attackColor: "#FF5555",
                 width: 50,
                 height: 50
             },
-            { // Type 1 - Monster 2 (shoots blue lightning bolts)
+            {
                 name: "Bolt",
                 color: "#5555FF",
                 health: 60,
-                speed: 0, // REDUCED BY 100% (from 2.5 to 0)
+                speed: 0,
                 attackDamage: 12,
                 attackCooldown: 4000,
                 attackColor: "#5555FF",
                 width: 55,
                 height: 55
             },
-            { // Type 2 - Monster 3 (shoots fire)
+            {
                 name: "Flamer",
                 color: "#FF8800",
                 health: 70,
-                speed: 0, // REDUCED BY 100% (from 1.8 to 0)
+                speed: 0,
                 attackDamage: 15,
                 attackCooldown: 3500,
                 attackColor: "#FF8800",
                 width: 60,
                 height: 60
             },
-            { // Type 3 - Monster 4 (shoots green lightning)
+            {
                 name: "Acid",
                 color: "#55FF55",
                 health: 80,
-                speed: 0, // REDUCED BY 100% (from 2.2 to 0)
+                speed: 0,
                 attackDamage: 18,
                 attackCooldown: 3000,
                 attackColor: "#55FF55",
                 width: 65,
                 height: 65
             },
-            { // Type 4 - Monster 5 (shoots orange electricity)
+            {
                 name: "Volt",
                 color: "#FFAA00",
                 health: 100,
-                speed: 0, // REDUCED BY 100% (from 1.5 to 0)
+                speed: 0,
                 attackDamage: 20,
                 attackCooldown: 2500,
                 attackColor: "#FFAA00",
@@ -536,35 +538,35 @@
             }
         ];
         
-        // Stage configurations
+        // FIXED: New stage configurations with proper enemy counts
         const stageConfigs = [
-            { // Stage 1
-                monsters: [0], // Only type 0 monsters
-                counts: [10], // 10 of type 0
-                spawnTime: 60, // Spawn over 60 seconds
-                totalTime: 180 // 3 minutes
-            },
-            { // Stage 2
-                monsters: [0, 1], // Type 0 and 1
-                counts: [10, 10], // 10 of each
+            { // Stage 1: 10 enemies
+                totalEnemies: 10,
+                monsterTypes: [0], // Only type 0
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 3
-                monsters: [0, 1, 2], // Type 0, 1, 2
-                counts: [10, 10, 10], // 10 of each
+            { // Stage 2: 20 enemies
+                totalEnemies: 20,
+                monsterTypes: [0, 1], // Types 0 and 1
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 4
-                monsters: [0, 1, 2, 3], // Type 0, 1, 2, 3
-                counts: [10, 10, 10, 10], // 10 of each
+            { // Stage 3: 30 enemies
+                totalEnemies: 30,
+                monsterTypes: [0, 1, 2], // Types 0, 1, and 2
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 5
-                monsters: [0, 1, 2, 3, 4], // All types
-                counts: [10, 10, 10, 10, 10], // 10 of each
+            { // Stage 4: 40 enemies
+                totalEnemies: 40,
+                monsterTypes: [0, 1, 2, 3], // Types 0, 1, 2, and 3
+                spawnTime: 60,
+                totalTime: 180
+            },
+            { // Stage 5: 50 enemies
+                totalEnemies: 50,
+                monsterTypes: [0, 1, 2, 3, 4], // All types
                 spawnTime: 60,
                 totalTime: 180
             }
@@ -583,7 +585,6 @@
             map: "https://github.com/TitanBusinessPros/DSD/raw/main/Game-Map-Image.png"
         };
         
-        // Load images
         let imagesLoaded = 0;
         const totalImages = Object.keys(imageUrls).length;
         
@@ -598,7 +599,6 @@
                 };
                 images[key].onerror = () => {
                     console.error(`Failed to load image: ${imageUrls[key]}`);
-                    // Use colored rectangles as fallback
                     images[key] = null;
                     imagesLoaded++;
                 };
@@ -611,7 +611,6 @@
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.5;
         
-        // Sound effects
         const sounds = {
             shoot: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-shot-1669.mp3'),
             hit: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-explosion-2759.mp3'),
@@ -621,34 +620,45 @@
             gameOver: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-retro-game-over-1947.mp3')
         };
         
-        // Set volume for all sounds
         for (const key in sounds) {
             sounds[key].volume = 0.3;
         }
         
-        // Game functions
+        // FIXED: Proper game initialization
         function initGame() {
+            // Reset ALL game state
             gameState = 'playing';
             currentStage = 1;
             score = 0;
             kills = 0;
-            gameTime = stageConfigs[currentStage-1].totalTime;
+            stageKills = 0;
+            
+            const config = stageConfigs[0];
+            totalEnemiesThisStage = config.totalEnemies;
+            gameTime = config.totalTime;
             fuseBoxTime = 0;
             spawnStartTime = Date.now();
             lastTime = Date.now();
             
+            // Reset player completely
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
             player.health = player.maxHealth;
+            player.direction = { x: 0, y: 0 };
+            player.lastAttack = 0;
             
+            // Clear all game objects
             monsters = [];
             playerProjectiles = [];
             monsterProjectiles = [];
             
-            // Start spawning monsters for current stage
+            // Reset input
+            for (const key in keys) {
+                keys[key] = false;
+            }
+            
             startStage(currentStage);
             
-            // Start background music
             if (audioEnabled) {
                 backgroundMusic.currentTime = 0;
                 backgroundMusic.play().catch(e => console.log("Audio play failed:", e));
@@ -657,23 +667,30 @@
             updateUI();
         }
         
+        // FIXED: Proper stage initialization
         function startStage(stage) {
             const config = stageConfigs[stage-1];
             gameTime = config.totalTime;
             fuseBoxTime = 0;
             spawnStartTime = Date.now();
+            stageKills = 0;
+            totalEnemiesThisStage = config.totalEnemies;
             
-            // Clear existing monsters
             monsters = [];
+            playerProjectiles = [];
+            monsterProjectiles = [];
             
-            // Calculate spawn intervals
-            const totalMonsters = config.counts.reduce((a, b) => a + b, 0);
-            const spawnInterval = config.spawnTime * 1000 / totalMonsters; // in ms
+            // Distribute enemies evenly across available monster types
+            const numTypes = config.monsterTypes.length;
+            const enemiesPerType = Math.floor(config.totalEnemies / numTypes);
+            const remainder = config.totalEnemies % numTypes;
+            
+            const spawnInterval = config.spawnTime * 1000 / config.totalEnemies;
             
             let monsterIndex = 0;
-            for (let i = 0; i < config.monsters.length; i++) {
-                const monsterType = config.monsters[i];
-                const count = config.counts[i];
+            for (let i = 0; i < numTypes; i++) {
+                const monsterType = config.monsterTypes[i];
+                const count = enemiesPerType + (i < remainder ? 1 : 0);
                 
                 for (let j = 0; j < count; j++) {
                     setTimeout(() => {
@@ -689,14 +706,10 @@
         function spawnMonster(type) {
             const monsterType = monsterTypes[type];
             
-            // Spawn monsters WITHIN the visible canvas area (not off-screen)
-            // This ensures they're visible to players
-            const margin = 50; // Keep monsters at least 50px from edges
-            
+            const margin = 50;
             const x = margin + Math.random() * (canvas.width - 2 * margin);
             const y = margin + Math.random() * (canvas.height - 2 * margin);
             
-            // Ensure monsters don't spawn too close to the fuse box
             let spawnX = x;
             let spawnY = y;
             const fuseBoxDistance = Math.sqrt(
@@ -704,12 +717,9 @@
                 Math.pow(spawnY - fuseBox.y, 2)
             );
             
-            // If too close to fuse box, move them away
             if (fuseBoxDistance < 200) {
                 spawnX = fuseBox.x + (Math.random() > 0.5 ? 200 : -200);
                 spawnY = fuseBox.y + (Math.random() > 0.5 ? 200 : -200);
-                
-                // Keep within bounds
                 spawnX = Math.max(margin, Math.min(canvas.width - margin, spawnX));
                 spawnY = Math.max(margin, Math.min(canvas.height - margin, spawnY));
             }
@@ -722,7 +732,7 @@
                 type: type,
                 health: monsterType.health,
                 maxHealth: monsterType.health,
-                speed: monsterType.speed, // This is now 0 for all monsters
+                speed: monsterType.speed,
                 attackDamage: monsterType.attackDamage,
                 attackCooldown: monsterType.attackCooldown,
                 lastAttack: 0,
@@ -738,52 +748,36 @@
             if (gameState !== 'playing') return;
             
             const currentTime = Date.now();
-            const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+            const deltaTime = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
             
-            // Update player
             updatePlayer();
-            
-            // Update monsters
             updateMonsters(currentTime);
-            
-            // Update projectiles
             updateProjectiles();
-            
-            // Check collisions
             checkCollisions();
-            
-            // Check if player is on fuse box
             checkFuseBox();
-            
-            // Check if player is in water
             checkWater();
             
-            // Update game time - FIXED: Use deltaTime for accurate timing
             gameTime -= deltaTime;
             
-            // Check for stage completion
-            if (monsters.length === 0 && fuseBoxTime >= 20) {
+            // FIXED: Proper stage completion check
+            if (stageKills >= totalEnemiesThisStage && fuseBoxTime >= 20) {
                 completeStage();
                 return;
             }
             
-            // Check for game over conditions
             if (player.health <= 0 || gameTime <= 0) {
                 gameOver();
                 return;
             }
             
-            // Update UI
             updateUI();
         }
         
         function updatePlayer() {
-            // Move player with reduced speed (50% of original)
-            player.x += player.direction.x * player.speed; // speed is now 2.5 instead of 5
+            player.x += player.direction.x * player.speed;
             player.y += player.direction.y * player.speed;
             
-            // Keep player in bounds
             player.x = Math.max(player.width/2, Math.min(canvas.width - player.width/2, player.x));
             player.y = Math.max(player.height/2, Math.min(canvas.height - player.height/2, player.y));
         }
@@ -792,25 +786,16 @@
             for (let i = monsters.length - 1; i >= 0; i--) {
                 const monster = monsters[i];
                 
-                // Monster movement - NOW WITH 0 SPEED (100% reduction)
-                // Monsters will not move
-                // The commented code below shows what movement would look like if speed > 0
-                // const dx = player.x - monster.x;
-                // const dy = player.y - monster.y;
-                // const distance = Math.sqrt(dx*dx + dy*dy);
-                // monster.x += (dx / distance) * monster.speed; // This would be 0
-                // monster.y += (dy / distance) * monster.speed; // This would be 0
-                
-                // Monster attack
                 if (currentTime - monster.lastAttack > monster.attackCooldown) {
                     monsterAttack(monster);
                     monster.lastAttack = currentTime;
                 }
                 
-                // Remove dead monsters
+                // FIXED: Properly track kills
                 if (monster.health <= 0) {
                     monsters.splice(i, 1);
                     kills++;
+                    stageKills++;
                     score += 100;
                     if (audioEnabled) sounds.monsterHit.play().catch(e => console.log("Sound error"));
                 }
@@ -822,7 +807,6 @@
             const dy = player.y - monster.y;
             const distance = Math.sqrt(dx*dx + dy*dy);
             
-            // Only attack if player is within reasonable range
             if (distance < 800) {
                 monsterProjectiles.push({
                     x: monster.x,
@@ -837,26 +821,22 @@
         }
         
         function updateProjectiles() {
-            // Update player projectiles
             for (let i = playerProjectiles.length - 1; i >= 0; i--) {
                 const proj = playerProjectiles[i];
                 proj.x += proj.dx;
                 proj.y += proj.dy;
                 
-                // Remove if out of bounds
                 if (proj.x < -50 || proj.x > canvas.width + 50 || 
                     proj.y < -50 || proj.y > canvas.height + 50) {
                     playerProjectiles.splice(i, 1);
                 }
             }
             
-            // Update monster projectiles
             for (let i = monsterProjectiles.length - 1; i >= 0; i--) {
                 const proj = monsterProjectiles[i];
                 proj.x += proj.dx;
                 proj.y += proj.dy;
                 
-                // Remove if out of bounds
                 if (proj.x < -50 || proj.x > canvas.width + 50 || 
                     proj.y < -50 || proj.y > canvas.height + 50) {
                     monsterProjectiles.splice(i, 1);
@@ -865,7 +845,6 @@
         }
         
         function checkCollisions() {
-            // Player projectiles vs monsters
             for (let i = playerProjectiles.length - 1; i >= 0; i--) {
                 const proj = playerProjectiles[i];
                 
@@ -884,7 +863,6 @@
                 }
             }
             
-            // Monster projectiles vs player
             for (let i = monsterProjectiles.length - 1; i >= 0; i--) {
                 const proj = monsterProjectiles[i];
                 
@@ -894,11 +872,7 @@
                 
                 if (distance < player.width/2 + proj.radius) {
                     let damage = proj.damage;
-                    
-                    // 20% more damage if in water
-                    if (isInWater) {
-                        damage *= 1.2;
-                    }
+                    if (isInWater) damage *= 1.2;
                     
                     player.health -= damage;
                     monsterProjectiles.splice(i, 1);
@@ -912,7 +886,6 @@
                 }
             }
             
-            // Monster vs player collision (rare since monsters don't move)
             for (let i = monsters.length - 1; i >= 0; i--) {
                 const monster = monsters[i];
                 
@@ -921,18 +894,13 @@
                 const distance = Math.sqrt(dx*dx + dy*dy);
                 
                 if (distance < monster.width/2 + player.width/2) {
-                    let damage = 5; // Base collision damage
-                    
-                    // 20% more damage if in water
-                    if (isInWater) {
-                        damage *= 1.2;
-                    }
+                    let damage = 5;
+                    if (isInWater) damage *= 1.2;
                     
                     player.health -= damage;
                     
                     if (audioEnabled) sounds.hit.play().catch(e => console.log("Sound error"));
                     
-                    // Push player away
                     player.x -= dx / distance * 10;
                     player.y -= dy / distance * 10;
                     
@@ -945,13 +913,13 @@
         }
         
         function checkFuseBox() {
-            // Check if player is on fuse box
             const dx = player.x - fuseBox.x;
             const dy = player.y - fuseBox.y;
             const distance = Math.sqrt(dx*dx + dy*dy);
             
-            if (distance < fuseBox.width/2 && monsters.length === 0) {
-                fuseBoxTime += 1/60; // Increase by ~1 second per 60 frames
+            // FIXED: Check if all enemies are killed, not just if monsters array is empty
+            if (distance < fuseBox.width/2 && stageKills >= totalEnemiesThisStage) {
+                fuseBoxTime += 1/60;
             } else {
                 fuseBoxTime = 0;
             }
@@ -971,20 +939,17 @@
                 }
             }
             
-            // Show/hide water warning
             const waterWarning = document.getElementById('waterWarning');
             waterWarning.style.display = isInWater ? 'block' : 'none';
         }
         
         function completeStage() {
             gameState = 'stageComplete';
-            score += Math.floor(gameTime) * 10; // Bonus for remaining time
+            score += Math.floor(gameTime) * 10;
             
-            // Update stage complete message
             document.getElementById('stageCompleteMessage').textContent = 
                 `Stage ${currentStage} Complete! You defended the fuse box!`;
             
-            // Show stage complete screen
             document.getElementById('stageCompleteScreen').style.display = 'flex';
             
             if (audioEnabled) {
@@ -992,7 +957,6 @@
                 sounds.stageComplete.play().catch(e => console.log("Sound error"));
             }
             
-            // Save progress
             saveGame();
         }
         
@@ -1000,33 +964,35 @@
             currentStage++;
             
             if (currentStage > maxStages) {
-                // Game completed
                 document.getElementById('stageCompleteMessage').textContent = 
                     `Congratulations! You completed all stages! Final Score: ${score}`;
                 document.getElementById('nextStageButton').style.display = 'none';
                 return;
             }
             
-            // Hide stage complete screen
             document.getElementById('stageCompleteScreen').style.display = 'none';
+            document.getElementById('nextStageButton').style.display = 'block';
             
-            // Reset for next stage
+            // FIXED: Properly reset for next stage
             gameState = 'playing';
-            gameTime = stageConfigs[currentStage-1].totalTime;
+            const config = stageConfigs[currentStage-1];
+            totalEnemiesThisStage = config.totalEnemies;
+            gameTime = config.totalTime;
             fuseBoxTime = 0;
             spawnStartTime = Date.now();
+            stageKills = 0;
+            lastTime = Date.now();
             
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
+            player.direction = { x: 0, y: 0 };
             
             monsters = [];
             playerProjectiles = [];
             monsterProjectiles = [];
             
-            // Start next stage
             startStage(currentStage);
             
-            // Resume background music
             if (audioEnabled) {
                 backgroundMusic.play().catch(e => console.log("Sound error"));
             }
@@ -1034,10 +1000,13 @@
             updateUI();
         }
         
+        // FIXED: Proper game over handling
         function gameOver() {
+            // Prevent multiple calls
+            if (gameState === 'gameOver') return;
+            
             gameState = 'gameOver';
             
-            // Update game over message
             let message = "Mason has been shocked! ";
             if (gameTime <= 0) {
                 message = "Time's up! The fuse box overloaded! ";
@@ -1045,8 +1014,6 @@
             message += `Final Score: ${score}`;
             
             document.getElementById('gameOverMessage').textContent = message;
-            
-            // Show game over screen
             document.getElementById('gameOverScreen').style.display = 'flex';
             
             if (audioEnabled) {
@@ -1054,35 +1021,27 @@
                 sounds.gameOver.play().catch(e => console.log("Sound error"));
             }
             
-            // Save score
             saveGame();
         }
         
+        // FIXED: Updated UI to show correct counter
         function updateUI() {
-            // Update health
             const healthPercent = (player.health / player.maxHealth) * 100;
             document.getElementById('healthFill').style.width = `${healthPercent}%`;
             document.getElementById('healthValue').textContent = `${Math.round(healthPercent)}%`;
             
-            // Update stage
             document.getElementById('stageValue').textContent = `${currentStage}/${maxStages}`;
             
-            // Update monsters
-            const stageConfig = stageConfigs[currentStage-1];
-            const totalMonsters = stageConfig.counts.reduce((a, b) => a + b, 0);
-            const remainingMonsters = monsters.length;
-            document.getElementById('monstersValue').textContent = `${totalMonsters - remainingMonsters}/${totalMonsters}`;
+            // FIXED: Show killed/total for current stage
+            document.getElementById('monstersValue').textContent = `${stageKills}/${totalEnemiesThisStage}`;
             
-            // Update fuse time
             document.getElementById('fuseTimeValue').textContent = `${Math.round(fuseBoxTime)}s`;
             
-            // Update time - FIXED: Using actual gameTime which now counts down at correct speed
             const minutes = Math.max(0, Math.floor(gameTime / 60));
             const seconds = Math.max(0, Math.floor(gameTime % 60));
             document.getElementById('timeValue').textContent = 
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             
-            // Update kills and score
             document.getElementById('killsValue').textContent = kills;
             document.getElementById('scoreValue').textContent = score;
         }
@@ -1092,11 +1051,9 @@
             
             if (currentTime - player.lastAttack < player.attackSpeed) return;
             
-            // Find nearest monster to aim at
             let targetX = player.x + (player.direction.x || 0) * 100;
             let targetY = player.y + (player.direction.y || 0) * 100;
             
-            // If no direction (standing still), find nearest monster
             if ((player.direction.x === 0 && player.direction.y === 0) || 
                 (player.direction.x === undefined || player.direction.y === undefined)) {
                 let nearestDist = Infinity;
@@ -1123,7 +1080,6 @@
                 }
             }
             
-            // Calculate direction to target
             const dx = targetX - player.x;
             const dy = targetY - player.y;
             const distance = Math.sqrt(dx*dx + dy*dy);
@@ -1147,18 +1103,14 @@
         
         // Drawing functions
         function drawGame() {
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw map background
             if (images.map) {
                 ctx.drawImage(images.map, 0, 0, canvas.width, canvas.height);
             } else {
-                // Fallback background
                 ctx.fillStyle = "#1a1a2e";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // Draw grid pattern
                 ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
                 ctx.lineWidth = 1;
                 
@@ -1177,14 +1129,12 @@
                 }
             }
             
-            // Draw water areas
             ctx.fillStyle = "rgba(0, 100, 255, 0.3)";
             for (const water of waterAreas) {
                 ctx.beginPath();
                 ctx.arc(water.x, water.y, water.radius, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Water ripple effect
                 ctx.strokeStyle = "rgba(100, 200, 255, 0.5)";
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -1192,7 +1142,6 @@
                 ctx.stroke();
             }
             
-            // Draw fuse box
             if (images.fuseBox) {
                 ctx.drawImage(
                     images.fuseBox, 
@@ -1202,15 +1151,13 @@
                     fuseBox.height
                 );
             } else {
-                // Fallback fuse box
                 ctx.fillStyle = "#444";
                 ctx.fillRect(fuseBox.x - fuseBox.width/2, fuseBox.y - fuseBox.height/2, fuseBox.width, fuseBox.height);
                 
                 ctx.fillStyle = "#666";
                 ctx.fillRect(fuseBox.x - fuseBox.width/3, fuseBox.y - fuseBox.height/3, fuseBox.width/1.5, fuseBox.height/1.5);
                 
-                // Fuse box indicator when active
-                if (monsters.length === 0) {
+                if (stageKills >= totalEnemiesThisStage) {
                     ctx.fillStyle = fuseBoxTime >= 20 ? "#00FF00" : "#FFFF00";
                     ctx.beginPath();
                     ctx.arc(fuseBox.x, fuseBox.y - 60, 10 + Math.sin(Date.now() / 200) * 5, 0, Math.PI * 2);
@@ -1218,11 +1165,9 @@
                 }
             }
             
-            // Draw monsters - NOW VISIBLE ON SCREEN
             for (const monster of monsters) {
                 let monsterImg = null;
                 
-                // Get the appropriate image for the monster type
                 if (monster.type === 0 && images.monster1) monsterImg = images.monster1;
                 else if (monster.type === 1 && images.monster2) monsterImg = images.monster2;
                 else if (monster.type === 2 && images.monster3) monsterImg = images.monster3;
@@ -1230,38 +1175,32 @@
                 else if (monster.type === 4 && images.monster5) monsterImg = images.monster5;
                 
                 if (monsterImg) {
-                    // Ensure monster is drawn within visible canvas area
                     const drawX = Math.max(monster.width/2, Math.min(canvas.width - monster.width/2, monster.x));
                     const drawY = Math.max(monster.height/2, Math.min(canvas.height - monster.height/2, monster.y));
                     
                     ctx.drawImage(monsterImg, drawX - monster.width/2, drawY - monster.height/2, monster.width, monster.height);
                 } else {
-                    // Fallback colored rectangle
                     ctx.fillStyle = monster.color;
                     ctx.fillRect(monster.x - monster.width/2, monster.y - monster.height/2, monster.width, monster.height);
                     
-                    // Monster eye
                     ctx.fillStyle = "#000";
                     ctx.beginPath();
                     ctx.arc(monster.x, monster.y - monster.height/6, 5, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 
-                // Monster health bar
                 const healthPercent = monster.health / monster.maxHealth;
                 ctx.fillStyle = "#333";
                 ctx.fillRect(monster.x - monster.width/2, monster.y - monster.height/2 - 10, monster.width, 5);
                 ctx.fillStyle = healthPercent > 0.5 ? "#00FF00" : healthPercent > 0.25 ? "#FFFF00" : "#FF0000";
                 ctx.fillRect(monster.x - monster.width/2, monster.y - monster.height/2 - 10, monster.width * healthPercent, 5);
                 
-                // Monster name
                 ctx.fillStyle = "#FFF";
                 ctx.font = "12px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText(monster.name, monster.x, monster.y - monster.height/2 - 15);
             }
             
-            // Draw player
             if (images.player) {
                 ctx.drawImage(
                     images.player, 
@@ -1271,29 +1210,24 @@
                     player.height
                 );
             } else {
-                // Fallback player
                 ctx.fillStyle = "#FFCC00";
                 ctx.fillRect(player.x - player.width/2, player.y - player.height/2, player.width, player.height);
                 
-                // Player face
                 ctx.fillStyle = "#000";
                 ctx.beginPath();
                 ctx.arc(player.x, player.y - 10, 5, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Player tool
                 ctx.fillStyle = "#888";
                 ctx.fillRect(player.x + player.width/4, player.y - player.height/4, 20, 5);
             }
             
-            // Draw projectiles
             for (const proj of playerProjectiles) {
                 ctx.fillStyle = proj.color;
                 ctx.beginPath();
                 ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Lightning effect
                 ctx.strokeStyle = "#FFFFFF";
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -1308,7 +1242,6 @@
                 ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Projectile trail
                 ctx.strokeStyle = proj.color;
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -1317,8 +1250,7 @@
                 ctx.stroke();
             }
             
-            // Draw fuse box progress if no monsters
-            if (monsters.length === 0) {
+            if (stageKills >= totalEnemiesThisStage) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.fillRect(fuseBox.x - 60, fuseBox.y - 80, 120, 15);
                 
@@ -1331,7 +1263,6 @@
                 ctx.fillText(`Fuse Box: ${Math.round(fuseBoxTime)}/20s`, fuseBox.x, fuseBox.y - 85);
             }
             
-            // Draw player direction indicator when standing still
             if (player.direction.x === 0 && player.direction.y === 0) {
                 ctx.strokeStyle = "#FFFF00";
                 ctx.lineWidth = 2;
@@ -1343,7 +1274,6 @@
             }
         }
         
-        // Save/load game
         function saveGame() {
             const gameData = {
                 currentStage: currentStage,
@@ -1359,17 +1289,14 @@
             const savedData = localStorage.getItem('dsmGameData');
             if (savedData) {
                 const gameData = JSON.parse(savedData);
-                // Could load saved game state here
             }
         }
         
-        // Input handling
         const keys = {};
         
         window.addEventListener('keydown', (e) => {
             keys[e.key] = true;
             
-            // Space to shoot
             if (e.key === ' ' && gameState === 'playing') {
                 playerAttack();
                 e.preventDefault();
@@ -1380,7 +1307,6 @@
             keys[e.key] = false;
         });
         
-        // Update player direction based on keys
         function updateInput() {
             player.direction.x = 0;
             player.direction.y = 0;
@@ -1390,14 +1316,12 @@
             if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.direction.x = -1;
             if (keys['ArrowRight'] || keys['d'] || keys['D']) player.direction.x = 1;
             
-            // Normalize diagonal movement
             if (player.direction.x !== 0 && player.direction.y !== 0) {
-                player.direction.x *= 0.7071; // 1/√2
+                player.direction.x *= 0.7071;
                 player.direction.y *= 0.7071;
             }
         }
         
-        // Mobile touch controls
         let joystickActive = false;
         let joystickStartX = 0;
         let joystickStartY = 0;
@@ -1419,7 +1343,6 @@
             joystickX = touch.clientX - joystickStartX;
             joystickY = touch.clientY - joystickStartY;
             
-            // Limit joystick movement
             const distance = Math.sqrt(joystickX * joystickX + joystickY * joystickY);
             const maxDistance = 40;
             
@@ -1431,7 +1354,6 @@
             joystick.style.transform = `translate(calc(-50% + ${joystickX}px), calc(-50% + ${joystickY}px))`;
             joystickActive = true;
             
-            // Update player direction
             player.direction.x = joystickX / maxDistance;
             player.direction.y = joystickY / maxDistance;
         });
@@ -1444,7 +1366,6 @@
             joystickX = touch.clientX - joystickStartX;
             joystickY = touch.clientY - joystickStartY;
             
-            // Limit joystick movement
             const distance = Math.sqrt(joystickX * joystickX + joystickY * joystickY);
             const maxDistance = 40;
             
@@ -1455,7 +1376,6 @@
             
             joystick.style.transform = `translate(calc(-50% + ${joystickX}px), calc(-50% + ${joystickY}px))`;
             
-            // Update player direction
             player.direction.x = joystickX / maxDistance;
             player.direction.y = joystickY / maxDistance;
         });
@@ -1467,7 +1387,6 @@
             player.direction.y = 0;
         });
         
-        // Shoot button for mobile
         shootBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (gameState === 'playing') {
@@ -1475,14 +1394,12 @@
             }
         });
         
-        // Also allow clicking on mobile (for testing)
         shootBtn.addEventListener('click', () => {
             if (gameState === 'playing') {
                 playerAttack();
             }
         });
         
-        // Game loop
         function gameLoop() {
             updateInput();
             updateGame();
@@ -1490,7 +1407,6 @@
             requestAnimationFrame(gameLoop);
         }
         
-        // Event listeners for buttons
         document.getElementById('startButton').addEventListener('click', () => {
             document.getElementById('startScreen').style.display = 'none';
             loadImages();
@@ -1506,6 +1422,7 @@
         document.getElementById('backToMenuButton').addEventListener('click', () => {
             document.getElementById('gameOverScreen').style.display = 'none';
             document.getElementById('startScreen').style.display = 'flex';
+            gameState = 'start';
         });
         
         document.getElementById('nextStageButton').addEventListener('click', () => {
@@ -1524,11 +1441,9 @@
             }
         });
         
-        // Load any saved game data
         window.addEventListener('load', () => {
             loadGame();
             
-            // Show high score on start screen if available
             const highScore = localStorage.getItem('dsmHighScore');
             if (highScore) {
                 const rulesDiv = document.getElementById('rules');
@@ -1541,7 +1456,6 @@
             }
         });
         
-        // Start the game loop
         gameLoop();
     </script>
 </body>
