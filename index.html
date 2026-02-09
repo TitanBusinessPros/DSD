@@ -211,6 +211,56 @@
             right: 30px;
         }
         
+        #adScreen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 25;
+        }
+        
+        #adVideo {
+            max-width: 90%;
+            max-height: 70vh;
+            border: 3px solid #ffcc00;
+            border-radius: 10px;
+        }
+        
+        #adMessage {
+            color: #ffcc00;
+            font-size: 1.8rem;
+            margin-top: 20px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        #adTimer {
+            color: #fff;
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+        
+        #continueButton {
+            background: linear-gradient(to bottom, #00cc00, #008800);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        #continueButton:hover {
+            background: linear-gradient(to bottom, #00ff00, #00cc00);
+            transform: scale(1.05);
+        }
+        
         #gameOverScreen {
             position: absolute;
             width: 100%;
@@ -331,14 +381,14 @@
     <div id="gameContainer">
         <div id="startScreen">
             <h1 id="title">Don't Shock Mason</h1>
-            <img id="startImage" src="https://github.com/TitanBusinessPros/DSD/raw/main/Game%20Start.png" alt="Game Start">
+            <img id="startImage" src="https://github.com/TitanBusinessPros/DSD/raw/main/Game-Start-Image.png" alt="Game Start">
             <div id="rules">
                 <h2>Game Rules:</h2>
                 <ul>
                     <li>Defend the fuse box from electrical monsters for 5 stages</li>
                     <li>Stand on the fuse box for 20 seconds after killing all monsters to win each stage</li>
                     <li>Each stage has a 3-minute time limit</li>
-                    <li>Stage 1: 10 enemies | Stage 2: 20 | Stage 3: 30 | Stage 4: 40 | Stage 5: 50</li>
+                    <li>Stage 1: 10 enemies | Stage 2: 20 enemies | Stage 3: 30 enemies | Stage 4: 40 enemies | Stage 5: 50 enemies</li>
                     <li>You take 20% more damage when standing in water</li>
                     <li>Use arrow keys or touch controls to move</li>
                     <li>Press Space or touch the shoot button to fire lightning bolts</li>
@@ -347,6 +397,16 @@
                 </ul>
             </div>
             <button id="startButton">START GAME</button>
+        </div>
+        
+        <div id="adScreen">
+            <video id="adVideo" autoplay>
+                <source src="https://github.com/TitanBusinessPros/DSD/raw/main/DE-Ad-1.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <p id="adMessage">Watch this ad to get an extra life and continue!</p>
+            <p id="adTimer">Video ends in: <span id="adTimeRemaining">0</span>s</p>
+            <button id="continueButton">CONTINUE WITH EXTRA LIFE</button>
         </div>
         
         <div id="gameOverScreen">
@@ -377,8 +437,8 @@
                 <span id="stageValue" class="ui-value">1/5</span>
             </div>
             <div class="ui-row">
-                <span class="ui-label">Monsters:</span>
-                <span id="monstersValue" class="ui-value">0/10</span>
+                <span class="ui-label">Remaining:</span>
+                <span id="monstersValue" class="ui-value">10/10</span>
             </div>
             <div class="ui-row">
                 <span class="ui-label">Fuse Time:</span>
@@ -434,13 +494,17 @@
         let score = 0;
         let kills = 0;
         let stageKills = 0; // Track kills for current stage
-        let totalEnemiesThisStage = 0; // Total enemies for current stage
-        let gameTime = 180;
+        let gameTime = 180; // 3 minutes in seconds
         let fuseBoxTime = 0;
         let isInWater = false;
         let audioEnabled = true;
         let lastTime = 0;
         let spawnStartTime = 0;
+        let animationFrameId = null; // Track animation frame for cleanup
+        let hasUsedExtraLife = false; // Track if player has used their extra life this game
+        let adWatchTimer = null; // Timer for ad countdown
+        let totalMonstersForStage = 0; // Track total monsters that should spawn in current stage
+        let monstersSpawned = 0; // Track how many monsters have actually spawned
         
         // Player stats
         const player = {
@@ -538,35 +602,35 @@
             }
         ];
         
-        // FIXED: New stage configurations with proper enemy counts
+        // Stage configurations - FIXED: Each stage adds 10 more monsters
         const stageConfigs = [
-            { // Stage 1: 10 enemies
-                totalEnemies: 10,
-                monsterTypes: [0], // Only type 0
+            { // Stage 1: 10 monsters
+                monsters: [0],
+                counts: [10],
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 2: 20 enemies
-                totalEnemies: 20,
-                monsterTypes: [0, 1], // Types 0 and 1
+            { // Stage 2: 20 monsters
+                monsters: [0, 1],
+                counts: [10, 10],
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 3: 30 enemies
-                totalEnemies: 30,
-                monsterTypes: [0, 1, 2], // Types 0, 1, and 2
+            { // Stage 3: 30 monsters
+                monsters: [0, 1, 2],
+                counts: [10, 10, 10],
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 4: 40 enemies
-                totalEnemies: 40,
-                monsterTypes: [0, 1, 2, 3], // Types 0, 1, 2, and 3
+            { // Stage 4: 40 monsters
+                monsters: [0, 1, 2, 3],
+                counts: [10, 10, 10, 10],
                 spawnTime: 60,
                 totalTime: 180
             },
-            { // Stage 5: 50 enemies
-                totalEnemies: 50,
-                monsterTypes: [0, 1, 2, 3, 4], // All types
+            { // Stage 5: 50 monsters
+                monsters: [0, 1, 2, 3, 4],
+                counts: [10, 10, 10, 10, 10],
                 spawnTime: 60,
                 totalTime: 180
             }
@@ -585,6 +649,7 @@
             map: "https://github.com/TitanBusinessPros/DSD/raw/main/Game-Map-Image.png"
         };
         
+        // Load images
         let imagesLoaded = 0;
         const totalImages = Object.keys(imageUrls).length;
         
@@ -611,6 +676,7 @@
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.5;
         
+        // Sound effects
         const sounds = {
             shoot: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-shot-1669.mp3'),
             hit: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-explosion-2759.mp3'),
@@ -620,42 +686,39 @@
             gameOver: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-retro-game-over-1947.mp3')
         };
         
+        // Set volume for all sounds
         for (const key in sounds) {
             sounds[key].volume = 0.3;
         }
         
-        // FIXED: Proper game initialization
+        // Game functions
         function initGame() {
-            // Reset ALL game state
+            // FIXED: Stop any existing game loop
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
             gameState = 'playing';
             currentStage = 1;
             score = 0;
             kills = 0;
             stageKills = 0;
-            
-            const config = stageConfigs[0];
-            totalEnemiesThisStage = config.totalEnemies;
-            gameTime = config.totalTime;
+            gameTime = stageConfigs[currentStage-1].totalTime;
             fuseBoxTime = 0;
             spawnStartTime = Date.now();
             lastTime = Date.now();
+            hasUsedExtraLife = false; // Reset extra life for new game
+            totalMonstersForStage = 0;
+            monstersSpawned = 0;
             
-            // Reset player completely
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
             player.health = player.maxHealth;
-            player.direction = { x: 0, y: 0 };
-            player.lastAttack = 0;
             
-            // Clear all game objects
             monsters = [];
             playerProjectiles = [];
             monsterProjectiles = [];
-            
-            // Reset input
-            for (const key in keys) {
-                keys[key] = false;
-            }
             
             startStage(currentStage);
             
@@ -667,35 +730,36 @@
             updateUI();
         }
         
-        // FIXED: Proper stage initialization
         function startStage(stage) {
             const config = stageConfigs[stage-1];
             gameTime = config.totalTime;
             fuseBoxTime = 0;
-            spawnStartTime = Date.now();
             stageKills = 0;
-            totalEnemiesThisStage = config.totalEnemies;
+            spawnStartTime = Date.now();
             
+            // Clear monsters array
             monsters = [];
-            playerProjectiles = [];
-            monsterProjectiles = [];
             
-            // Distribute enemies evenly across available monster types
-            const numTypes = config.monsterTypes.length;
-            const enemiesPerType = Math.floor(config.totalEnemies / numTypes);
-            const remainder = config.totalEnemies % numTypes;
+            // Calculate total monsters for this stage
+            totalMonstersForStage = config.counts.reduce((a, b) => a + b, 0);
+            monstersSpawned = 0;
             
-            const spawnInterval = config.spawnTime * 1000 / config.totalEnemies;
+            console.log(`Starting Stage ${stage}: Should spawn ${totalMonstersForStage} monsters total`);
+            
+            // Clear any existing timeouts to prevent duplicate spawns
+            const spawnInterval = config.spawnTime * 1000 / totalMonstersForStage;
             
             let monsterIndex = 0;
-            for (let i = 0; i < numTypes; i++) {
-                const monsterType = config.monsterTypes[i];
-                const count = enemiesPerType + (i < remainder ? 1 : 0);
+            for (let i = 0; i < config.monsters.length; i++) {
+                const monsterType = config.monsters[i];
+                const count = config.counts[i];
                 
                 for (let j = 0; j < count; j++) {
                     setTimeout(() => {
-                        if (gameState === 'playing') {
+                        if (gameState === 'playing' && monstersSpawned < totalMonstersForStage) {
                             spawnMonster(monsterType);
+                            monstersSpawned++;
+                            console.log(`Spawned monster ${monstersSpawned}/${totalMonstersForStage}`);
                         }
                     }, monsterIndex * spawnInterval);
                     monsterIndex++;
@@ -720,6 +784,7 @@
             if (fuseBoxDistance < 200) {
                 spawnX = fuseBox.x + (Math.random() > 0.5 ? 200 : -200);
                 spawnY = fuseBox.y + (Math.random() > 0.5 ? 200 : -200);
+                
                 spawnX = Math.max(margin, Math.min(canvas.width - margin, spawnX));
                 spawnY = Math.max(margin, Math.min(canvas.height - margin, spawnY));
             }
@@ -760,8 +825,7 @@
             
             gameTime -= deltaTime;
             
-            // FIXED: Proper stage completion check
-            if (stageKills >= totalEnemiesThisStage && fuseBoxTime >= 20) {
+            if (monsters.length === 0 && fuseBoxTime >= 20) {
                 completeStage();
                 return;
             }
@@ -791,7 +855,6 @@
                     monster.lastAttack = currentTime;
                 }
                 
-                // FIXED: Properly track kills
                 if (monster.health <= 0) {
                     monsters.splice(i, 1);
                     kills++;
@@ -872,7 +935,10 @@
                 
                 if (distance < player.width/2 + proj.radius) {
                     let damage = proj.damage;
-                    if (isInWater) damage *= 1.2;
+                    
+                    if (isInWater) {
+                        damage *= 1.2;
+                    }
                     
                     player.health -= damage;
                     monsterProjectiles.splice(i, 1);
@@ -895,7 +961,10 @@
                 
                 if (distance < monster.width/2 + player.width/2) {
                     let damage = 5;
-                    if (isInWater) damage *= 1.2;
+                    
+                    if (isInWater) {
+                        damage *= 1.2;
+                    }
                     
                     player.health -= damage;
                     
@@ -917,8 +986,7 @@
             const dy = player.y - fuseBox.y;
             const distance = Math.sqrt(dx*dx + dy*dy);
             
-            // FIXED: Check if all enemies are killed, not just if monsters array is empty
-            if (distance < fuseBox.width/2 && stageKills >= totalEnemiesThisStage) {
+            if (distance < fuseBox.width/2 && monsters.length === 0) {
                 fuseBoxTime += 1/60;
             } else {
                 fuseBoxTime = 0;
@@ -971,21 +1039,17 @@
             }
             
             document.getElementById('stageCompleteScreen').style.display = 'none';
-            document.getElementById('nextStageButton').style.display = 'block';
             
-            // FIXED: Properly reset for next stage
             gameState = 'playing';
-            const config = stageConfigs[currentStage-1];
-            totalEnemiesThisStage = config.totalEnemies;
-            gameTime = config.totalTime;
+            gameTime = stageConfigs[currentStage-1].totalTime;
             fuseBoxTime = 0;
-            spawnStartTime = Date.now();
             stageKills = 0;
-            lastTime = Date.now();
+            spawnStartTime = Date.now();
+            totalMonstersForStage = 0;
+            monstersSpawned = 0;
             
             player.x = canvas.width / 2;
             player.y = canvas.height / 2;
-            player.direction = { x: 0, y: 0 };
             
             monsters = [];
             playerProjectiles = [];
@@ -1000,13 +1064,23 @@
             updateUI();
         }
         
-        // FIXED: Proper game over handling
         function gameOver() {
-            // Prevent multiple calls
-            if (gameState === 'gameOver') return;
-            
+            // FIXED: Properly stop the game
             gameState = 'gameOver';
             
+            // Stop animation loop
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            // Check if player can get an extra life (hasn't used one yet)
+            if (!hasUsedExtraLife) {
+                showAdForExtraLife();
+                return;
+            }
+            
+            // No extra life available - show game over screen
             let message = "Mason has been shocked! ";
             if (gameTime <= 0) {
                 message = "Time's up! The fuse box overloaded! ";
@@ -1024,7 +1098,75 @@
             saveGame();
         }
         
-        // FIXED: Updated UI to show correct counter
+        function showAdForExtraLife() {
+            // Show ad screen
+            document.getElementById('adScreen').style.display = 'flex';
+            
+            // Get video element
+            const adVideo = document.getElementById('adVideo');
+            const continueBtn = document.getElementById('continueButton');
+            const adTimeDisplay = document.getElementById('adTimeRemaining');
+            
+            // Reset and play video
+            adVideo.currentTime = 0;
+            adVideo.play().catch(e => console.log("Video play failed:", e));
+            
+            // Hide continue button initially
+            continueBtn.style.display = 'none';
+            
+            // Update timer display
+            let updateTimer = setInterval(() => {
+                const remaining = Math.ceil(adVideo.duration - adVideo.currentTime);
+                adTimeDisplay.textContent = remaining > 0 ? remaining : 0;
+            }, 100);
+            
+            // When video ends, show continue button
+            adVideo.onended = () => {
+                clearInterval(updateTimer);
+                continueBtn.style.display = 'block';
+                adTimeDisplay.textContent = '0';
+            };
+            
+            // Allow skipping after 5 seconds (optional)
+            setTimeout(() => {
+                if (adVideo.currentTime >= 5) {
+                    continueBtn.style.display = 'block';
+                }
+            }, 5000);
+            
+            if (audioEnabled) {
+                backgroundMusic.pause();
+            }
+        }
+        
+        function continueWithExtraLife() {
+            // Hide ad screen
+            document.getElementById('adScreen').style.display = 'none';
+            
+            // Mark that player has used their extra life
+            hasUsedExtraLife = true;
+            
+            // Restore player health
+            player.health = player.maxHealth;
+            
+            // Clear all enemy projectiles to give player a chance
+            monsterProjectiles = [];
+            
+            // Resume game
+            gameState = 'playing';
+            lastTime = Date.now();
+            
+            // Resume background music
+            if (audioEnabled) {
+                backgroundMusic.play().catch(e => console.log("Sound error"));
+            }
+            
+            // Restart game loop
+            gameLoop();
+            
+            updateUI();
+        }
+        
         function updateUI() {
             const healthPercent = (player.health / player.maxHealth) * 100;
             document.getElementById('healthFill').style.width = `${healthPercent}%`;
@@ -1032,8 +1174,8 @@
             
             document.getElementById('stageValue').textContent = `${currentStage}/${maxStages}`;
             
-            // FIXED: Show killed/total for current stage
-            document.getElementById('monstersValue').textContent = `${stageKills}/${totalEnemiesThisStage}`;
+            // FIXED: Show remaining monsters out of total for stage
+            document.getElementById('monstersValue').textContent = `${monsters.length}/${totalMonstersForStage}`;
             
             document.getElementById('fuseTimeValue').textContent = `${Math.round(fuseBoxTime)}s`;
             
@@ -1157,7 +1299,7 @@
                 ctx.fillStyle = "#666";
                 ctx.fillRect(fuseBox.x - fuseBox.width/3, fuseBox.y - fuseBox.height/3, fuseBox.width/1.5, fuseBox.height/1.5);
                 
-                if (stageKills >= totalEnemiesThisStage) {
+                if (monsters.length === 0) {
                     ctx.fillStyle = fuseBoxTime >= 20 ? "#00FF00" : "#FFFF00";
                     ctx.beginPath();
                     ctx.arc(fuseBox.x, fuseBox.y - 60, 10 + Math.sin(Date.now() / 200) * 5, 0, Math.PI * 2);
@@ -1250,7 +1392,7 @@
                 ctx.stroke();
             }
             
-            if (stageKills >= totalEnemiesThisStage) {
+            if (monsters.length === 0) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.fillRect(fuseBox.x - 60, fuseBox.y - 80, 120, 15);
                 
@@ -1404,7 +1546,11 @@
             updateInput();
             updateGame();
             drawGame();
-            requestAnimationFrame(gameLoop);
+            
+            // FIXED: Only continue loop if game is playing
+            if (gameState === 'playing') {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
         }
         
         document.getElementById('startButton').addEventListener('click', () => {
@@ -1417,16 +1563,25 @@
         document.getElementById('restartButton').addEventListener('click', () => {
             document.getElementById('gameOverScreen').style.display = 'none';
             initGame();
+            // FIXED: Restart the game loop
+            gameLoop();
+        });
+        
+        document.getElementById('continueButton').addEventListener('click', () => {
+            continueWithExtraLife();
         });
         
         document.getElementById('backToMenuButton').addEventListener('click', () => {
             document.getElementById('gameOverScreen').style.display = 'none';
             document.getElementById('startScreen').style.display = 'flex';
-            gameState = 'start';
         });
         
         document.getElementById('nextStageButton').addEventListener('click', () => {
             nextStage();
+            // FIXED: Restart the game loop for next stage
+            if (gameState === 'playing') {
+                gameLoop();
+            }
         });
         
         document.getElementById('audioToggle').addEventListener('click', () => {
