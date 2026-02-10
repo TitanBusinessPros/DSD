@@ -1450,17 +1450,20 @@
         });
         
         function updateInput() {
-            player.direction.x = 0;
-            player.direction.y = 0;
-            
-            if (keys['ArrowUp'] || keys['w'] || keys['W']) player.direction.y = -1;
-            if (keys['ArrowDown'] || keys['s'] || keys['S']) player.direction.y = 1;
-            if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.direction.x = -1;
-            if (keys['ArrowRight'] || keys['d'] || keys['D']) player.direction.x = 1;
-            
-            if (player.direction.x !== 0 && player.direction.y !== 0) {
-                player.direction.x *= 0.7071;
-                player.direction.y *= 0.7071;
+            // Only update from keyboard if joystick is not active
+            if (!joystickActive) {
+                player.direction.x = 0;
+                player.direction.y = 0;
+                
+                if (keys['ArrowUp'] || keys['w'] || keys['W']) player.direction.y = -1;
+                if (keys['ArrowDown'] || keys['s'] || keys['S']) player.direction.y = 1;
+                if (keys['ArrowLeft'] || keys['a'] || keys['A']) player.direction.x = -1;
+                if (keys['ArrowRight'] || keys['d'] || keys['D']) player.direction.x = 1;
+                
+                if (player.direction.x !== 0 && player.direction.y !== 0) {
+                    player.direction.x *= 0.7071;
+                    player.direction.y *= 0.7071;
+                }
             }
         }
         
